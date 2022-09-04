@@ -577,6 +577,7 @@ void dataPump( FileEntry *fileEntry, int transfer_index ) {
   savData(fileEntry);
 }
 
+/*
 void program_FPGA() {
   unsigned long bitcount = 0;
   bool last = false;
@@ -640,18 +641,18 @@ void program_FPGA() {
     loaded += to_read;
   }
 
-  /* AKL (Version1.7): Dump additional 16 bytes of 0xFF at the end of the RBF file */
-  /*
+  // AKL (Version1.7): Dump additional 16 bytes of 0xFF at the end of the RBF file //
+  
   GPIOB->regs->ODR |= 1;
   for ( n = 0; n < 127; n++ ) {
     GPIOB->regs->ODR |= 1;
     GPIOB->regs->ODR &= ~(1);
   }
-  */
+  
 
-  //digitalWrite( PIN_TDI, HIGH );
-  //digitalWrite( PIN_TMS, HIGH );
-  //JTAG_clock( );
+  digitalWrite( PIN_TDI, HIGH );
+  digitalWrite( PIN_TMS, HIGH );
+  JTAG_clock( );
 
   Log.notice(" OK"CR"Programmed: %l bytes"CR, bitcount);
 
@@ -659,6 +660,239 @@ void program_FPGA() {
 
   JTAG_POSprogram();
 }
+*/
+
+
+
+// Send an enitre byte to the device. If last is '1', TMS will
+// be high for the last bit transmitteda (e.g. force trasnition
+// to EXIT1 state).
+void
+send_data_byte (unsigned char val, unsigned char last)
+{
+  int n;
+  for (n = 7; n >= 0; n--)
+    {
+      if (( val >> n) & 0x01 ) {
+          GPIOB->regs->ODR |= (1<<1);    // TDI HIGH
+      } else {
+         GPIOB->regs->ODR &= ~(1<<1);  // TDI LOW
+      }
+      if (n == 0 & last) {
+         GPIOB->regs->ODR |= (1<<10);  // TMS HIGH
+      } else {
+         GPIOB->regs->ODR &= ~(1<<10);   // TMS LOW
+      }
+      JTAG_clock();
+   }
+}
+
+void program_FPGA() {
+  //unsigned long bitcount = 0;
+  bool last = false;
+  //int n = 0;
+  unsigned long file_size;
+  unsigned int read_count = 0;
+  unsigned char val;
+  unsigned long to_read;
+  unsigned long loaded = 0;
+  char sd_buffer[BUFFER_SIZE];
+  int value;
+  char fileSelected[LONG_FILENAME_LEN];
+  strcpy( fileSelected, file_selected.long_name);
+
+  setCorePath();
+
+  Log.notice("Selected File to open: '%s'"CR, fileSelected );
+  
+  SdFile file;
+  file.open( fileSelected, O_READ );
+
+  char c;
+  char next;      /* char from file */
+  unsigned char uc; 
+  unsigned long bitcount;    /* bits transferred */
+  int n, x, len, len2, token;
+  int devid; 
+  int state = LOW;
+   
+  //Log.trace("Primer valor de uc: %x"CR,uc);
+  
+  // Read information of the Bit header
+  //uc = getc(file);
+  file.read(&uc,1);
+  len = uc << 8;
+  //uc = getc (file);
+  file.read(&uc,1);    // read the second character
+  len += uc;
+  for (x = 0; x < len; x++){
+    //c = getc (file);
+    file.read(&uc,1);    // read more characters
+  }
+ 
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len = uc << 8;
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len += uc;
+  
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  token = uc;
+  //printf("Token: %x\n",token);
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len = uc << 8;
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len += uc;
+  //printf("Length: %0d\n",len);
+
+  Log.trace("Design Name: ");
+  
+  for (x = 0; x < len; x++)
+    {
+      //uc = getc (file);
+      file.read(&uc,1);    // read one character
+      //printf ("%c", uc);
+      //Serial1.print(uc);
+      Log.trace("%c",uc);
+    }
+  Log.trace(CR);
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  token = uc;
+  //printf("Token: %x\n",token);
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len = uc << 8;
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len += uc;
+  //printf("Length: %0d\n",len);
+
+  Log.trace("Device: ");
+  
+  for (x = 0; x < len; x++)
+    {
+      //uc = getc (file);
+      file.read(&uc,1);    // read one character
+      //printf ("%c", uc);
+      Log.trace("%c",uc);
+    }
+  //printf ("\n");
+  Log.trace(CR);
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  token = uc;
+  //printf("Token: %x\n",token);
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len = uc << 8;
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len += uc;
+  //printf("Length: %0d\n",len);
+
+  //printf ("Date: ");
+  Log.trace("Date: ");
+  
+  for (x = 0; x < len; x++)
+    {
+      //uc = getc (file);
+      file.read(&uc,1);    // read one character
+      //printf ("%c", uc);
+      Log.trace("%c",uc);
+    }
+  //printf ("\n");
+  Log.trace(CR);
+
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  token = uc;
+  //printf("Token: %x\n",token);
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len = uc << 8;
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len += uc;
+  //printf("Length: %0d\n",len);
+
+  //printf ("Time: ");
+  Log.trace("Time: ");
+  
+  for (x = 0; x < len; x++)
+    {
+      //uc = getc (file);
+      file.read(&uc,1);    // read one character
+      //printf ("%c", uc);
+       Log.trace("%c",uc);
+    }
+  //printf ("\n");
+  Log.trace(CR);
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  
+  token = uc;
+  //printf("Token: %x\n",token);
+
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len = uc << 24;
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len += uc << 16;
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len += uc << 8;
+  //uc = getc (file);
+  file.read(&uc,1);    // read one character
+  len += uc;
+  //printf ("Bitstream Length: %0d bits\n", len * 8); 
+  Log.trace("Bitstream Length: %l bits"CR, len * 8 );
+  
+
+  
+  JTAG_PREprogram();
+
+  // SEND DATA
+
+  bitcount = 0;
+  
+  Log.notice("Programming > ");
+
+  for (n = 0; n < len; n++)
+    {
+      file.read(&uc,1);    // read one character
+      
+      send_data_byte (uc, n == (len - 1));
+
+      bitcount += 8;
+      if ((bitcount % (256 * 1024)) == 0)
+      Log.notice("*");
+      state = ! state;
+      digitalWrite( PIN_LED, state );
+      
+    }
+
+  Log.notice(" OK"CR"Programmed: %l bytes"CR, bitcount);
+
+  file.close();
+
+  JTAG_POSprogram();
+  
+}
+
 
 void initialData( void ) {
   // config buffer - 16 bytes
@@ -730,6 +964,7 @@ void setSPIspeed (unsigned char speed)
 
   Log.trace("SPI Speed : %d"CR, speed);
 }
+
 /**
    prepare hardware
 

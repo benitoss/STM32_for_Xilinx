@@ -137,8 +137,8 @@ const unsigned char version[4] = "201";
 #define SPI_SELECTED()     GPIOB->regs->BRR  = (1U << 12) //pin PB12 (SPI_SS)
 
 #define JTAG_clock() GPIOB->regs->ODR |=1; GPIOB->regs->ODR &= ~(1);
-#define TDI_HIGH()   GPIOB->regs->ODR |= 2;
-#define TDI_LOW()    GPIOB->regs->ODR &= ~(2);
+#define TDI_HIGH()   GPIOB->regs->ODR |= (1<<1);
+#define TDI_LOW()    GPIOB->regs->ODR &= ~(1<<1);
 
 #define CHECK_WAIT()    GPIOA->regs->IDR & 0x8000
 

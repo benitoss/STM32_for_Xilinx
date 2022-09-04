@@ -71,8 +71,7 @@ void JTAG_reset() {
   digitalWrite(PIN_TMS, HIGH);
 
   // go to reset state
-  //for (i = 0; i < 10; i++)
-  for (i = 0; i < 5; i++)
+  for (i = 0; i < 10; i++)
   {
     //JTAG_clock();
     GPIOB->regs->ODR |= 1;
@@ -276,13 +275,20 @@ void JTAG_PREprogram_Altera() {
 */
 
 void JTAG_PREprogram() {
+   
+   int n;
 
   /*            comment                                TDI   TMS TCK
    * 1: On power-up, place a logic 1 on the TMS,
    *    and clock the TCK five times. This ensures      X     1   5
    *    starting in the TLR (Test-Logic-Reset) state.
    */
-  JTAG_reset();   
+   digitalWrite(PIN_TMS, HIGH);
+   for (n = 0; n < 6; n++){
+     //GPIOB->regs->ODR |= (1<<10);
+     JTAG_clock();
+   }
+    
   /* 
    *  2: Move into the RTI state.                       X     0   1
   */
@@ -461,7 +467,10 @@ void JTAG_POSprogram() {
    * now functional.                                    X     1   3
    */
 
-  JTAG_reset();
+  //JTAG_reset();
+  for (n = 0; n < 5; n++){
+     GPIOB->regs->ODR |= (1<<10); JTAG_clock();
+  }
 
 }
 
