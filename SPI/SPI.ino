@@ -641,15 +641,17 @@ void program_FPGA() {
   }
 
   /* AKL (Version1.7): Dump additional 16 bytes of 0xFF at the end of the RBF file */
+  /*
   GPIOB->regs->ODR |= 1;
   for ( n = 0; n < 127; n++ ) {
     GPIOB->regs->ODR |= 1;
     GPIOB->regs->ODR &= ~(1);
   }
+  */
 
-  digitalWrite( PIN_TDI, HIGH );
-  digitalWrite( PIN_TMS, HIGH );
-  JTAG_clock( );
+  //digitalWrite( PIN_TDI, HIGH );
+  //digitalWrite( PIN_TMS, HIGH );
+  //JTAG_clock( );
 
   Log.notice(" OK"CR"Programmed: %l bytes"CR, bitcount);
 
@@ -735,14 +737,21 @@ void setSPIspeed (unsigned char speed)
 void setup( void )
 {
   //Initialize serial and wait for port to open:
-  Serial.begin( 115200 );
-
-  while ( ! Serial ) {
-    // wait for serial port to connect. Needed for native USB port only
+  Serial1.begin( 115200 );
+   
+  while ( ! Serial1 ) {
+     // wait for serial port to connect. Needed for native USB port only
     delay( 100 );
   }
-  Log.begin(LOG_LEVEL, &Serial, false);
 
+  Serial1.println("Serial Started");
+  
+  Log.begin(LOG_LEVEL, &Serial1, false);
+
+  Log.trace( "Log Initializated"CR );
+  //Log.notice("*"CR);
+  //Serial1.println("Log Initializated");
+  
   pinMode( PIN_nWAIT, INPUT_PULLUP );
   pinMode( PIN_LED, OUTPUT );
 
@@ -763,7 +772,7 @@ void setup( void )
 
   //slave deselected
   SPI_DESELECTED();
-  waitACK( );
+ // waitACK( );
 
   Log.notice("*"CR);
 

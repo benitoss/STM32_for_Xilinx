@@ -42,6 +42,7 @@
 // #define MC2P
 // #define UNAMIGA2
 // #define NEPTUNO
+   #define ZX2
 //---------------------------------
 
 /*
@@ -56,7 +57,7 @@
 * LOG_LEVEL_VERBOSE    all
  */
 #define LOG_LEVEL LOG_LEVEL_VERBOSE
-#define DISABLE_LOGGING // Uncomment this line, after debugging, to reduce binary size
+//#define DISABLE_LOGGING // Uncomment this line, after debugging, to reduce binary size
 
 //#define DISABLE_SPLASH_DELAY // Disable splash screen delay. To speed up development
 //#define TEST_NAVIGATION // Enable pressing F12 to show current Core's menu without reloading
@@ -100,6 +101,12 @@ const unsigned char version[4] = "201";
 #define SPLASH "         N E P T U N O  "
 #define EXTENSION "NP1"
 #define LAUNCHER_CORE_EXT "CNU"
+#endif
+
+#ifdef ZX2
+#define SPLASH "      Z X 2             "
+#define EXTENSION "ZX2"
+#define LAUNCHER_CORE_EXT "CX2"
 #endif
 
 #define LAUNCHER_EXTENSION "ARC"

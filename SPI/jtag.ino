@@ -71,7 +71,8 @@ void JTAG_reset() {
   digitalWrite(PIN_TMS, HIGH);
 
   // go to reset state
-  for (i = 0; i < 10; i++)
+  //for (i = 0; i < 10; i++)
+  for (i = 0; i < 5; i++)
   {
     //JTAG_clock();
     GPIOB->regs->ODR |= 1;
@@ -79,13 +80,21 @@ void JTAG_reset() {
   }
 }
 
-void JTAG_EnterSelectDR() {
+void JTAG_EnterSelectDR() {  // From Reset State
   // go to select DR
   digitalWrite(PIN_TMS, LOW); JTAG_clock();
   digitalWrite(PIN_TMS, HIGH); JTAG_clock();
 }
 
-void JTAG_EnterShiftIR() {
+// Added by Benitoss
+void JTAG_EnterSelectIR() {  // from Reset State
+  // go to select DR
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+}
+
+void JTAG_EnterShiftIR() {    // From Select DR
   digitalWrite(PIN_TMS, HIGH); JTAG_clock();
   digitalWrite(PIN_TMS, LOW); JTAG_clock();
   digitalWrite(PIN_TMS, LOW); JTAG_clock();
@@ -207,7 +216,8 @@ int JTAG_scan() {
   return 0;
 }
 
-void JTAG_PREprogram() {
+/*
+void JTAG_PREprogram_Altera() {
   int n;
 
   JTAG_reset();
@@ -240,7 +250,7 @@ void JTAG_PREprogram() {
 
   // update IR mode
 
-  // Drive TDI HIGH while moving to SHIFTDR */
+  // Drive TDI HIGH while moving to SHIFTDR 
   digitalWrite(PIN_TDI, HIGH);
 
   digitalWrite(PIN_TMS, HIGH); JTAG_clock();
@@ -255,7 +265,7 @@ void JTAG_PREprogram() {
   //digitalWrite(PIN_TMS, LOW); JTAG_clock(); //extra ?
 
 
-  /* Issue MAX_JTAG_INIT_CLOCK clocks in SHIFTDR state */
+  // Issue MAX_JTAG_INIT_CLOCK clocks in SHIFTDR state 
   digitalWrite(PIN_TDI, HIGH);
   for (n = 0; n < 300; n++) {
     JTAG_clock();
@@ -263,8 +273,57 @@ void JTAG_PREprogram() {
 
   digitalWrite(PIN_TDI, LOW);
 }
+*/
 
-void JTAG_POSprogram() {
+void JTAG_PREprogram() {
+
+  /*            comment                                TDI   TMS TCK
+   * 1: On power-up, place a logic 1 on the TMS,
+   *    and clock the TCK five times. This ensures      X     1   5
+   *    starting in the TLR (Test-Logic-Reset) state.
+   */
+  JTAG_reset();   
+  /* 
+   *  2: Move into the RTI state.                       X     0   1
+  */
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();
+  /* 
+   *  3: Move into the SELECT-IR state.                 X     1   2
+   */
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();JTAG_clock();
+  /* 
+   *  4: Enter the SHIFT-IR state.                      X     0   2
+   */
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();JTAG_clock();
+  /* 
+   *  5: Start loading the JPROGRAM instruction,     00101    0   5
+   *    (0000101) LSB first:
+   */
+  digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+  digitalWrite(PIN_TDI, LOW); JTAG_clock();
+  digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+  digitalWrite(PIN_TDI, LOW); JTAG_clock();
+  digitalWrite(PIN_TDI, LOW); JTAG_clock();
+  /* 
+   *  6: Load the MSB of the JPROGRAM instruction
+   *    when exiting SHIFT-IR, as defined in the        0     1   1
+   *    IEEE standard.
+   */
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  digitalWrite(PIN_TDI, LOW); JTAG_clock();
+  /* 
+   *  7: Enter the SELECT-DR state                      X     1   2
+   */
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();JTAG_clock();
+  /* 
+   *  8: Enter the SHIFT-DR state.                      X     0   2
+   */
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();JTAG_clock();
+
+}
+
+/*
+void JTAG_POSprogram_Altera() {
   int n;
 
   //aqui esta no exit DR
@@ -346,6 +405,67 @@ void JTAG_POSprogram() {
   JTAG_reset();
 
 }
+*/
+
+void JTAG_POSprogram() {
+  int n;
+  /*            comment                                TDI   TMS TCK
+   *             
+   * 11: Enter the UPDATE-DR state.                     X     1   1             
+   */
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  /* 
+   *  12: Move into the RTI state.                      X     0   1
+   */
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();
+  /*
+   * 13: Enter the SELECT-IR state.                     X     1   2
+   */
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock(); JTAG_clock();
+  /*
+   * 14: Move to the SHIFT-IR state.                    X     0   2
+   */
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();JTAG_clock();
+  /*
+   * 15: Start loading the JSTART instruction 
+   *     (001100) (optional). The JSTART instruction  01100   0   5
+   *     initializes the startup sequence.
+   */
+  digitalWrite(PIN_TDI, LOW); JTAG_clock();
+  digitalWrite(PIN_TDI, LOW); JTAG_clock();
+  digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+  digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+  digitalWrite(PIN_TDI, LOW); JTAG_clock();
+  /*
+   * 16: Load the last bit of the JSTART instruction.   0     1   1
+   */
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  /*
+   * 17: Move to the UPDATE-IR state.                   X     1   1
+   */
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  /*
+   * 18: Move to the RTI state and clock the
+   *     startup sequence by applying a minimum         X     0   16
+   *     of 2000 clock cycles to the TCK.
+   */
+  digitalWrite(PIN_TMS, LOW);
+  for (n = 0; n < 16; n++) {
+    //JTAG_clock();
+    GPIOB->regs->ODR |= 1;
+    GPIOB->regs->ODR &= ~(1);
+  }
+
+  /*
+   * 23: Move to the TLR state. The device is
+   * now functional.                                    X     1   3
+   */
+
+  JTAG_reset();
+
+}
+
+
 
 //   JTAG
 void setupJTAG( ) {

@@ -43,6 +43,8 @@ void initializeSdCard(void) {
   if ( !sd1.begin( SD_CONFIG ) ) {
 
     Log.notice("SD Card initialization failed!"CR);
+    //Serial1.println("SD Card initialization failed!!");
+    
     initOSD();
     OsdWriteOffset( 3, "          No SD Card!!! ", 1, 0, 0, 0 );
 
