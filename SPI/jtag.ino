@@ -309,7 +309,7 @@ void JTAG_PREprogram() {
    *    when exiting SHIFT-IR, as defined in the        0     1   1
    *    IEEE standard.
    */
-  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  digitalWrite(PIN_TMS, HIGH);
   digitalWrite(PIN_TDI, LOW); JTAG_clock();
   /* 
    *  7: Enter the SELECT-DR state                      X     1   2
