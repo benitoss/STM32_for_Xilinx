@@ -1,0 +1,14 @@
+Version 2.01
+============
+
+- ExFAT support (> 4GB);
+- ARC files support;
+- Disk image support (read and write);
+- Savegames;
+- No more file limit by directory;
+- Select ROM's root directory;
+- Fix directory navigation to parent;
+- Otimized file ordering;
+- Hide directories and files marked as "hidden";
+- Update on all development libraries;
+- Faster data loading (50% faster);
