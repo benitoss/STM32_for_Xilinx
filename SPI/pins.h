@@ -42,7 +42,9 @@
 // #define MC2P
 // #define UNAMIGA2
 // #define NEPTUNO
-   #define ZX2
+   #define ZX2    // Spartan6 lx16
+// #define ZX3    // Artix7 35
+// #define ZX4    // Artix7 100 
 //---------------------------------
 
 /*
@@ -108,6 +110,19 @@ const unsigned char version[4] = "201";
 #define EXTENSION "ZX2"
 #define LAUNCHER_CORE_EXT "CX2"
 #endif
+
+#ifdef ZX3
+#define SPLASH "      Z X 3             "
+#define EXTENSION "ZX3"
+#define LAUNCHER_CORE_EXT "CX3"
+#endif
+
+#ifdef ZX4
+#define SPLASH "      Z X 4             "
+#define EXTENSION "ZX4"
+#define LAUNCHER_CORE_EXT "CX4"
+#endif
+
 
 #define LAUNCHER_EXTENSION "ARC"
 

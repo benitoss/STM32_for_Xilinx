@@ -662,42 +662,17 @@ void program_FPGA() {
 }
 */
 
-
-
-// Send an enitre byte to the device. If last is '1', TMS will
-// be high for the last bit transmitteda (e.g. force trasnition
-// to EXIT1 state).
-void
-send_data_byte (unsigned char val, unsigned char last)
-{
-  int n;
-  for (n = 7; n >= 0; n--)
-    {
-      if (( val >> n) & 0x01 ) {
-          GPIOB->regs->ODR |= (1<<1);    // TDI HIGH
-      } else {
-         GPIOB->regs->ODR &= ~(1<<1);  // TDI LOW
-      }
-      if (n == 0 & last) {
-         GPIOB->regs->ODR |= (1<<10);  // TMS HIGH
-      } else {
-         GPIOB->regs->ODR &= ~(1<<10);   // TMS LOW
-      }
-      JTAG_clock();
-   }
-}
-
 void program_FPGA() {
-  //unsigned long bitcount = 0;
+  unsigned long bitcount = 0; /* bytes transferred */
   bool last = false;
   //int n = 0;
-  unsigned long file_size;
+  //unsigned long file_size;
   unsigned int read_count = 0;
   unsigned char val;
   unsigned long to_read;
   unsigned long loaded = 0;
   char sd_buffer[BUFFER_SIZE];
-  int value;
+  int value, f;
   char fileSelected[LONG_FILENAME_LEN];
   strcpy( fileSelected, file_selected.long_name);
 
@@ -711,9 +686,9 @@ void program_FPGA() {
   char c;
   char next;      /* char from file */
   unsigned char uc; 
-  unsigned long bitcount;    /* bits transferred */
   int n, x, len, len2, token;
-  int devid; 
+  // int total = file.fileSize();
+  // int divisor = total / 32;
   int state = LOW;
    
   //Log.trace("Primer valor de uc: %x"CR,uc);
@@ -859,9 +834,7 @@ void program_FPGA() {
   file.read(&uc,1);    // read one character
   len += uc;
   //printf ("Bitstream Length: %0d bits\n", len * 8); 
-  Log.trace("Bitstream Length: %l bits"CR, len * 8 );
-  
-
+  Log.trace("Bitstream Length: %l bytes or %l bits"CR, len,len * 8);
   
   JTAG_PREprogram();
 
@@ -871,20 +844,57 @@ void program_FPGA() {
   
   Log.notice("Programming > ");
 
-  for (n = 0; n < len; n++)
-    {
-      file.read(&uc,1);    // read one character
-      
-      send_data_byte (uc, n == (len - 1));
+  // We calculte the chunks based in len-1 and size of the sd_buffer
+  read_count = (len-1) / sizeof( sd_buffer );
+  if ( (len-1) % sizeof( sd_buffer ) != 0 ) {
+    read_count ++;
+  }
+  
+  // no Interrupts()
+  for ( int k = 1; k < read_count + 1; k++ ) {
+    to_read = ( (len-1) >= ( sizeof( sd_buffer ) * k ) ) ? sizeof( sd_buffer ) : (len-1) - loaded;
+    val = file.read( sd_buffer, to_read );
+    for (f = 0; f < to_read ; f ++ ) {
 
-      bitcount += 8;
-      if ((bitcount % (256 * 1024)) == 0)
-      Log.notice("*");
-      state = ! state;
-      digitalWrite( PIN_LED, state );
-      
+      if ( bitcount % (len/32) == 0 ) {
+        Log.notice("*");
+        state = ! state;
+        digitalWrite( PIN_LED, state );
+      }
+      bitcount++;
+
+      for (n = 7; n >= 0; n--) {    // Read from MSB contrary to Altera FPGAs
+        if ( ( sd_buffer[ f ] >> n ) & 0x01 ) {
+          GPIOB->regs->ODR |= 2;   // TDI HIGH
+        }
+        else {
+          GPIOB->regs->ODR &= ~(2); // TDI LOW
+        }
+
+        JTAG_clock();
+      }
     }
+    loaded += to_read;
+  }
+  // Now we read the last byte ------------------
 
+  file.read(&uc, 1 );
+ 
+  for (n = 7; n >= 0; n--){
+     if ( ( uc >> n ) & 0x01 ) {
+        GPIOB->regs->ODR |= 2;  // TDI HIGH
+     } else {
+        GPIOB->regs->ODR &= ~(2); // TDI LOW
+     }
+     if (n==0){
+        GPIOB->regs->ODR |= (1<<10);  // TMS HIGH
+     }
+     JTAG_clock();
+  }  
+  bitcount++ ;
+
+  //------------------------------------------
+   
   Log.notice(" OK"CR"Programmed: %l bytes"CR, bitcount);
 
   file.close();
