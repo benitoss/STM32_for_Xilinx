@@ -5,6 +5,11 @@ To know about usage, look at [docs/USAGE.md](./docs/USAGE.md)
 ## To know before start
 
 - Set the "FIRMWARE_TYPE", "LOG_LEVEL" and change "version" on `pins.h` file
+
+- Atention: You have to uncomment line 62 ( #define DISABLE_LOGGING ) of `pins.h` file after debugging, to reduce binary size 
+  But to avoid compilation errors, you have to update the file `ArduinoLog.h` from "C:\Users\Your_User\Documents\Arduino\libraries\ArduinoLog" 
+  following the changes of this commit --> https://github.com/thijse/Arduino-Log/pull/25/commits/a7ffa91a4036826d6217288c79bba15af3b0d5b2
+
 - The main file is `SPI.ino`. The execution starts on methods:
   - void setup( void )
   - void loop ( void )
