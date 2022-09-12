@@ -59,7 +59,7 @@
 * LOG_LEVEL_VERBOSE    all
  */
 #define LOG_LEVEL LOG_LEVEL_VERBOSE
-//#define DISABLE_LOGGING // Uncomment this line, after debugging, to reduce binary size
+// #define DISABLE_LOGGING // Uncomment this line, after debugging, to reduce binary size
 
 //#define DISABLE_SPLASH_DELAY // Disable splash screen delay. To speed up development
 //#define TEST_NAVIGATION // Enable pressing F12 to show current Core's menu without reloading

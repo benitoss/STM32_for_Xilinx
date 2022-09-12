@@ -93,20 +93,20 @@ void JTAG_EnterSelectIR() {  // from Reset State
   digitalWrite(PIN_TMS, HIGH); JTAG_clock();
 }
 
-void JTAG_EnterShiftIR() {    // From Select DR
+void JTAG_EnterShiftIR() {    // From SelectDR
   digitalWrite(PIN_TMS, HIGH); JTAG_clock();
   digitalWrite(PIN_TMS, LOW); JTAG_clock();
   digitalWrite(PIN_TMS, LOW); JTAG_clock();
 }
 
-void JTAG_EnterShiftDR() {
+void JTAG_EnterShiftDR() {  // From SelectDR
   digitalWrite(PIN_TMS, LOW); JTAG_clock();
   digitalWrite(PIN_TMS, LOW); JTAG_clock();
 
   // digitalWrite(PIN_TMS, LOW); JTAG_clock(); //extra ?
 }
 
-void JTAG_ExitShift() {
+void JTAG_ExitShift() {  // From ShiftIR or from ShiftDR to SelectDR
   digitalWrite(PIN_TMS, HIGH); JTAG_clock();
   digitalWrite(PIN_TMS, HIGH); JTAG_clock();
   digitalWrite(PIN_TMS, HIGH); JTAG_clock();
@@ -190,10 +190,10 @@ int JTAG_scan() {
   JTAG_EnterSelectDR();
   JTAG_EnterShiftIR() ;
 
-  IRlen = JTAG_DetermineChainLength("tamanho do IR");
+  IRlen = JTAG_DetermineChainLength("IR chain length");
 
   JTAG_EnterShiftDR();
-  nDevices = JTAG_DetermineChainLength("Qtd devices");
+  nDevices = JTAG_DetermineChainLength("Number of device(s)");
 
   if (IRlen == MaxIR_ChainLength || nDevices == MaxIR_ChainLength ) {
     Log.error("JTAG ERROR!!!!"CR);
@@ -206,14 +206,74 @@ int JTAG_scan() {
   JTAG_ReadDR(32 * nDevices);
 
   Log.trace("Device IDCODE: %x"CR, idcode.code + HEX);
-  Log.trace(" rev: %x"CR, idcode.b.rev);
-  Log.trace(" family: %x"CR, idcode.b.family);
-  Log.trace(" size: %x"CR, idcode.b.size);
-  Log.trace(" manuf: %x"CR, idcode.b.manuf);
-  Log.trace(" onebit: %x"CR, idcode.b.onebit);
+  //Log.trace(" rev: %x"CR, idcode.b.rev);
+  //Log.trace(" family: %x"CR, idcode.b.family);
+  //Log.trace(" size: %x"CR, idcode.b.size);
+  //Log.trace(" manuf: %x"CR, idcode.b.manuf);
+  //Log.trace(" onebit: %x"CR, idcode.b.onebit);
 
   return 0;
 }
+
+void JTAG_Shutdown()
+  {
+    int n;
+    
+    JTAG_reset(); // reset FSM
+    JTAG_EnterSelectDR(); // From Reset State
+    JTAG_EnterShiftIR();  // From SelectDR
+
+    // send JPROGRAM 001011
+    // TMS is allready LOW
+
+    digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+    digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+    digitalWrite(PIN_TDI, LOW); JTAG_clock();
+    digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+    digitalWrite(PIN_TDI, LOW); JTAG_clock();
+
+    digitalWrite(PIN_TMS, HIGH);  
+    digitalWrite(PIN_TDI, LOW); JTAG_clock();
+
+    
+    digitalWrite(PIN_TMS, HIGH); JTAG_clock(); // goto idle and wait
+    for (n = 0; n < 10000; n++){
+       //digitalWrite(PIN_TDI, LOW); // Already LOW
+       JTAG_clock();
+    }
+
+    JTAG_reset(); // goto reset
+  }
+
+void JTAG_Start()
+  {
+    int n;
+    
+    JTAG_reset(); // reset FSM
+    JTAG_EnterSelectDR(); // From Reset State
+    JTAG_EnterShiftIR();  // From SelectDR
+
+    // send JSTART 001100)
+    // TMS is allready LOW
+    
+    digitalWrite(PIN_TDI, LOW); JTAG_clock();
+    digitalWrite(PIN_TDI, LOW); JTAG_clock();
+    digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+    digitalWrite(PIN_TDI, HIGH); JTAG_clock();
+    digitalWrite(PIN_TDI, LOW); JTAG_clock();
+    
+    digitalWrite(PIN_TMS, HIGH);  
+    digitalWrite(PIN_TDI, LOW); JTAG_clock();
+    
+
+   digitalWrite(PIN_TMS, HIGH); JTAG_clock(); // goto idle and wait
+    for (n = 0; n < 2000; n++){
+       //digitalWrite(PIN_TDI, LOW); // Already LOW
+       JTAG_clock();
+   }
+
+    JTAG_reset(); // goto reset
+  }
 
 /*
 void JTAG_PREprogram() {  // For Altera
@@ -285,7 +345,8 @@ void JTAG_PREprogram() {  // Spartan6
   //    starting in the TLR (Test-Logic-Reset) state.
   //
    digitalWrite(PIN_TMS, HIGH);
-   for (n = 0; n < 6; n++){
+   //GPIOB->regs->ODR |= (1<<10);
+   for (n = 0; n < 5; n++){
      //GPIOB->regs->ODR |= (1<<10);
      JTAG_clock();
    }
@@ -297,13 +358,15 @@ void JTAG_PREprogram() {  // Spartan6
    
   //  3: Move into the SELECT-IR state.                 X     1   2
   
-  digitalWrite(PIN_TMS, HIGH); JTAG_clock();JTAG_clock();
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
    
   //  4: Enter the SHIFT-IR state.                      X     0   2
   
-  digitalWrite(PIN_TMS, LOW); JTAG_clock();JTAG_clock();
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();
    
-  //  5: Start loading the JPROGRAM instruction,     00101    0   5
+  //  5: Start loading the CFG_I instruction,     00101    0   5
   //    (0000101) LSB first:
   
   digitalWrite(PIN_TDI, HIGH); JTAG_clock();
@@ -321,11 +384,13 @@ void JTAG_PREprogram() {  // Spartan6
    
   //  7: Enter the SELECT-DR state                      X     1   2
   
-  digitalWrite(PIN_TMS, HIGH); JTAG_clock();JTAG_clock();
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
    
   //  8: Enter the SHIFT-DR state.                      X     0   2
   
-  digitalWrite(PIN_TMS, LOW); JTAG_clock();JTAG_clock();
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();
+  digitalWrite(PIN_TMS, LOW); JTAG_clock();
 
 }
 
@@ -543,8 +608,10 @@ void JTAG_POSprogram() {   //Spartan6
   
   // 16: Load the last bit of the JSTART instruction.   0     1   1
 
+  
+  digitalWrite(PIN_TMS, HIGH); 
   // digitalWrite(PIN_TDI, LOW);  //Already set
-  digitalWrite(PIN_TMS, HIGH); JTAG_clock();
+  JTAG_clock();
   
   // 17: Move to the UPDATE-IR state.                   X     1   1
   
@@ -556,7 +623,7 @@ void JTAG_POSprogram() {   //Spartan6
   //     of 16 clock cycles to the TCK.
   
   digitalWrite(PIN_TMS, LOW);
-  for (n = 0; n < 16; n++) {
+  for (n = 0; n < 100; n++) {
     //JTAG_clock();
     GPIOB->regs->ODR |= 1;
     GPIOB->regs->ODR &= ~(1);
@@ -569,7 +636,7 @@ void JTAG_POSprogram() {   //Spartan6
   JTAG_clock();JTAG_clock();JTAG_clock();
 
   
-  JTAG_reset();
+  // JTAG_reset();
   
   //digitalWrite(PIN_TMS, HIGH); //Already set
   //

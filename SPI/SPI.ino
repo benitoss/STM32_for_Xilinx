@@ -686,11 +686,12 @@ void program_FPGA() {
   char c;
   char next;      /* char from file */
   unsigned char uc; 
-  int n, x, len, len2, token;
+  int n, x, size, len, len2, token;
   // int total = file.fileSize();
   // int divisor = total / 32;
   int state = LOW;
-   
+
+  /* 
   //Log.trace("Primer valor de uc: %x"CR,uc);
   
   // Read information of the Bit header
@@ -732,7 +733,7 @@ void program_FPGA() {
       //uc = getc (file);
       file.read(&uc,1);    // read one character
       //printf ("%c", uc);
-      //Serial1.print(uc);
+      //Serial.print(uc);
       Log.trace("%c",uc);
     }
   Log.trace(CR);
@@ -834,8 +835,17 @@ void program_FPGA() {
   file.read(&uc,1);    // read one character
   len += uc;
   //printf ("Bitstream Length: %0d bits\n", len * 8); 
-  Log.trace("Bitstream Length: %l bytes or %l bits"CR, len,len * 8);
+  Log.trace("BIN File Length: %l bytes or %l bits"CR, len,len * 8);
+
+  file.seek(0);
+  */
+
+  size = file.size();
+  Log.notice("Bitstream File Length: %l bytes"CR, size);
   
+  Log.notice("Shutdown FPGA..."CR);
+  JTAG_Shutdown();
+
   JTAG_PREprogram();
 
   // SEND DATA
@@ -844,66 +854,89 @@ void program_FPGA() {
   
   Log.notice("Programming > ");
 
-  // We calculte the chunks based in len-1 and size of the sd_buffer
-  read_count = (len-1) / sizeof( sd_buffer );
-  if ( (len-1) % sizeof( sd_buffer ) != 0 ) {
-    read_count ++;
+  // We calculte the chunks based in size-1 and size of the sd_buffer
+  read_count = (size-1) / sizeof( sd_buffer );
+  if ( (size-1) % sizeof( sd_buffer ) != 0 ) {
+    read_count ++;  // Add one for the remainder bytes
   }
   
   // no Interrupts()
-  for ( int k = 1; k < read_count + 1; k++ ) {
-    to_read = ( (len-1) >= ( sizeof( sd_buffer ) * k ) ) ? sizeof( sd_buffer ) : (len-1) - loaded;
-    val = file.read( sd_buffer, to_read );
-    for (f = 0; f < to_read ; f ++ ) {
+  for ( int k = 1; k < read_count + 1; k++ ) {  // for each chunck of 512 bytes
+    // Check is a complete chunk or the remainder bytes
+    to_read = ( (size-1) >= ( sizeof( sd_buffer ) * k ) ) ? sizeof( sd_buffer ) : (size-1) - loaded;
+    
+    val = file.read(sd_buffer, to_read );  // Read the file to sd_buffer
+    for (f = 0; f < to_read ; f ++ ) {  // f = bytes to read
 
-      if ( bitcount % (len/32) == 0 ) {
+      if ( bitcount % ((size-1)/32) == 0 ) {
         Log.notice("*");
         state = ! state;
         digitalWrite( PIN_LED, state );
       }
-      bitcount++;
+      bitcount++; // add one byte to the counter
 
-      for (n = 7; n >= 0; n--) {    // Read from MSB contrary to Altera FPGAs
-        if ( ( sd_buffer[ f ] >> n ) & 0x01 ) {
+      for (n = 0; n < 8 ; n++) {    // Read from MSB contrary to Altera FPGAs
+        if ( ( sd_buffer[ f ] << n ) & 0x80 ) {
           GPIOB->regs->ODR |= 2;   // TDI HIGH
         }
         else {
           GPIOB->regs->ODR &= ~(2); // TDI LOW
         }
 
-        JTAG_clock();
+       // if ( (bitcount == size) && n==7 ){
+       //    GPIOB->regs->ODR |= (1<<10);  // TMS HIGH
+       //  }
+       
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //int tdo = digitalRead(PIN_TDO);
+          //int tdo = GPIOB->regs->IDR & (1<<11);
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
       }
     }
     loaded += to_read;
   }
+
   // Now we read the last byte ------------------
 
-  file.read(&uc, 1 );
- 
-  for (n = 7; n >= 0; n--){
-     if ( ( uc >> n ) & 0x01 ) {
-        GPIOB->regs->ODR |= 2;  // TDI HIGH
-     } else {
-        GPIOB->regs->ODR &= ~(2); // TDI LOW
-     }
-     if (n==0){
-        GPIOB->regs->ODR |= (1<<10);  // TMS HIGH
-     }
-     JTAG_clock();
-  }  
-  bitcount++ ;
+  val = file.read(&sd_buffer[0], 1 ); // Read the las byte
+  bitcount++;  // add one byte 
+  for (n = 0; n < 8 ; n++) {    // Read from MSB contrary to Altera FPGAs
+        if ( ( sd_buffer[0] << n ) & 0x80 ) {
+          GPIOB->regs->ODR |= 2;   // TDI HIGH
+        }
+        else {
+          GPIOB->regs->ODR &= ~(2); // TDI LOW
+        }
 
-  //------------------------------------------
+        if ( n==7 ){ // Only in the Last bit
+          GPIOB->regs->ODR |= (1<<10);  // TMS HIGH
+        }
+        
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //int tdo = digitalRead(PIN_TDO);
+          //int tdo = GPIOB->regs->IDR & (1<<11);
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+   }
    
+  //------------------------------------------
+
   Log.notice(" OK"CR"Programmed: %l bytes"CR, bitcount);
-
+    
   file.close();
-
-  JTAG_POSprogram();
   
+  Log.notice("Restart FPGA..."CR);
+  // JTAG_POSprogram();
+  //JTAG_Start();
+  
+  //Clock(LOW, 64);
+    
+  GPIOB->regs->ODR |= ~(1<<10);  // TMS LOW
+  for (n = 0; n < 64 ; n++) {
+        GPIOB->regs->ODR |=  1;  // TCK HIGH
+        GPIOB->regs->ODR &= ~1;   // TCK LOW
+  }
+
 }
-
-
 void initialData( void ) {
   // config buffer - 16 bytes
   spi_osd_cmd_cont(0x60); //cmd to fill the config buffer
@@ -982,20 +1015,20 @@ void setSPIspeed (unsigned char speed)
 void setup( void )
 {
   //Initialize serial and wait for port to open:
-  Serial1.begin( 115200 );
+  Serial.begin( 115200 );
    
-  while ( ! Serial1 ) {
+  while ( ! Serial ) {
      // wait for serial port to connect. Needed for native USB port only
     delay( 100 );
   }
 
-  Serial1.println("Serial Started");
+  Serial.println("Serial Started");
   
-  Log.begin(LOG_LEVEL, &Serial1, false);
+  Log.begin(LOG_LEVEL, &Serial, false);
 
   Log.trace( "Log Initializated"CR );
   //Log.notice("*"CR);
-  //Serial1.println("Log Initializated");
+  //Serial.println("Log Initializated");
   
   pinMode( PIN_nWAIT, INPUT_PULLUP );
   pinMode( PIN_LED, OUTPUT );
@@ -1018,8 +1051,6 @@ void setup( void )
   //slave deselected
   SPI_DESELECTED();
  // waitACK( );
-
-  Log.notice("*"CR);
 
   noticeVersion();
 
@@ -1072,7 +1103,7 @@ void loop ( void )
       unsigned int startTime = millis();
       program_FPGA( );
       processingTime("Program FPGA", startTime);
-      Log.notice(CR);
+      //Log.notice(CR);
     }
     releaseJTAG();
 
