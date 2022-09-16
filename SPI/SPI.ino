@@ -691,7 +691,9 @@ void program_FPGA() {
   // int divisor = total / 32;
   int state = LOW;
 
-  /* 
+  /*
+  // Print Header of BIT file
+ 
   //Log.trace("Primer valor de uc: %x"CR,uc);
   
   // Read information of the Bit header
@@ -838,8 +840,10 @@ void program_FPGA() {
   Log.trace("BIN File Length: %l bytes or %l bits"CR, len,len * 8);
 
   file.seek(0);
-  */
 
+  // End of Printing head of BIT File
+  */
+   
   size = file.size();
   Log.notice("Bitstream File Length: %l bytes"CR, size);
   
@@ -875,6 +879,8 @@ void program_FPGA() {
       }
       bitcount++; // add one byte to the counter
 
+      
+      /*
       for (n = 0; n < 8 ; n++) {    // Read from MSB contrary to Altera FPGAs
         if ( ( sd_buffer[ f ] << n ) & 0x80 ) {
           GPIOB->regs->ODR |= 2;   // TDI HIGH
@@ -892,13 +898,112 @@ void program_FPGA() {
           //int tdo = GPIOB->regs->IDR & (1<<11);
           GPIOB->regs->ODR &= ~1;   // TCK LOW
       }
+      */
+      // we use 8 if-else sentences instead the for-loop to save execution time
+      
+      if ( ( sd_buffer[ f ] ) & 0x80 ) {   // 8 bit
+          //GPIOB->regs->ODR |= 2;   // TDI HIGH
+          //GPIOB->regs->ODR |=  1;  // TCK HIGH
+          GPIOB->regs->ODR |=  3;   // TDI HIGH & TCK HIGH
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+        } else {
+          //GPIOB->regs->ODR &= ~(2); // TDI LOW
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //GPIOB->regs->ODR &= ~1;   // TCK LOW
+          GPIOB->regs->ODR &= ~(3); // TDI LOW & TCK LOW
+        }
+
+      if ( ( sd_buffer[ f ] ) & 0x40 ) {   // 7 bit
+          //GPIOB->regs->ODR |= 2;   // TDI HIGH
+          //GPIOB->regs->ODR |=  1;  // TCK HIGH
+          GPIOB->regs->ODR |=  3;   // TDI HIGH & TCK HIGH
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+        } else {
+          //GPIOB->regs->ODR &= ~(2); // TDI LOW
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //GPIOB->regs->ODR &= ~1;   // TCK LOW
+          GPIOB->regs->ODR &= ~(3); // TDI LOW & TCK LOW
+        }
+
+     if ( ( sd_buffer[ f ] ) & 0x20 ) {   // 6 bit
+          //GPIOB->regs->ODR |= 2;   // TDI HIGH
+          //GPIOB->regs->ODR |=  1;  // TCK HIGH
+          GPIOB->regs->ODR |=  3;   // TDI HIGH & TCK HIGH
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+        } else {
+          //GPIOB->regs->ODR &= ~(2); // TDI LOW
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //GPIOB->regs->ODR &= ~1;   // TCK LOW
+          GPIOB->regs->ODR &= ~(3); // TDI LOW & TCK LOW
+        }
+        
+     if ( ( sd_buffer[ f ]  ) & 0x10 ) {   // 5 bit
+          //GPIOB->regs->ODR |= 2;   // TDI HIGH
+          //GPIOB->regs->ODR |=  1;  // TCK HIGH
+          GPIOB->regs->ODR |=  3;   // TDI HIGH & TCK HIGH
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+        } else {
+          //GPIOB->regs->ODR &= ~(2); // TDI LOW
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //GPIOB->regs->ODR &= ~1;   // TCK LOW
+          GPIOB->regs->ODR &= ~(3); // TDI LOW & TCK LOW
+        }
+        
+     if ( ( sd_buffer[ f ]) & 0x08 ) {   // 4 bit
+          //GPIOB->regs->ODR |= 2;   // TDI HIGH
+          //GPIOB->regs->ODR |=  1;  // TCK HIGH
+          GPIOB->regs->ODR |=  3;   // TDI HIGH & TCK HIGH
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+        } else {
+          //GPIOB->regs->ODR &= ~(2); // TDI LOW
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //GPIOB->regs->ODR &= ~1;   // TCK LOW
+          GPIOB->regs->ODR &= ~(3); // TDI LOW & TCK LOW
+        }
+     
+     if ( ( sd_buffer[ f ]  ) & 0x04 ) {   // 3 bit
+          //GPIOB->regs->ODR |= 2;   // TDI HIGH
+          //GPIOB->regs->ODR |=  1;  // TCK HIGH
+          GPIOB->regs->ODR |=  3;   // TDI HIGH & TCK HIGH
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+        } else {
+          //GPIOB->regs->ODR &= ~(2); // TDI LOW
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //GPIOB->regs->ODR &= ~1;   // TCK LOW
+          GPIOB->regs->ODR &= ~(3); // TDI LOW & TCK LOW
+        }
+        
+     if ( ( sd_buffer[ f ]  ) & 0x02 ) {   // 2 bit
+          //GPIOB->regs->ODR |= 2;   // TDI HIGH
+          //GPIOB->regs->ODR |=  1;  // TCK HIGH
+          GPIOB->regs->ODR |=  3;   // TDI HIGH & TCK HIGH
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+        } else {
+          //GPIOB->regs->ODR &= ~(2); // TDI LOW
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //GPIOB->regs->ODR &= ~1;   // TCK LOW
+          GPIOB->regs->ODR &= ~(3); // TDI LOW & TCK LOW
+        }
+       
+     if ( ( sd_buffer[ f ] ) & 0x01 ) {   // 1 bit
+          //GPIOB->regs->ODR |= 2;   // TDI HIGH
+          //GPIOB->regs->ODR |=  1;  // TCK HIGH
+          GPIOB->regs->ODR |=  3;   // TDI HIGH & TCK HIGH
+          GPIOB->regs->ODR &= ~1;   // TCK LOW
+        } else {
+          //GPIOB->regs->ODR &= ~(2); // TDI LOW
+          GPIOB->regs->ODR |=  1;  // TCK HIGH
+          //GPIOB->regs->ODR &= ~1;   // TCK LOW
+          GPIOB->regs->ODR &= ~(3); // TDI LOW & TCK LOW
+        }
+        
     }
     loaded += to_read;
   }
 
   // Now we read the last byte ------------------
 
-  val = file.read(&sd_buffer[0], 1 ); // Read the las byte
+  val = file.read(&sd_buffer[0], 1 ); // Read the last byte
   bitcount++;  // add one byte 
   for (n = 0; n < 8 ; n++) {    // Read from MSB contrary to Altera FPGAs
         if ( ( sd_buffer[0] << n ) & 0x80 ) {
@@ -1027,8 +1132,6 @@ void setup( void )
   Log.begin(LOG_LEVEL, &Serial, false);
 
   Log.trace( "Log Initializated"CR );
-  //Log.notice("*"CR);
-  //Serial.println("Log Initializated");
   
   pinMode( PIN_nWAIT, INPUT_PULLUP );
   pinMode( PIN_LED, OUTPUT );
