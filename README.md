@@ -1,5 +1,7 @@
 # STM32 Development for Xilinx FPGAs
 
+This code is a modificaction of the fantastic STM32 code for Altera FPGA Boards created by Victor Trucco from https://gitlab.com/victor.trucco/Multicore/-/tree/master/System/STM32
+
 To know about usage, look at [docs/USAGE.md](./docs/USAGE.md)
 
 ## To know before start
